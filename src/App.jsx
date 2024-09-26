@@ -1,76 +1,78 @@
-import { useState, useEffect } from 'react'
+import React, { useState } from "react";
 import { ethers } from "ethers";
-import './App.css'
 
-function App() {
-  const [walletAddress, setWalletAddress] = useState(null);
+// Address of deployed contract
+const contractAddress = "YOUR_CONTRACT_ADDRESS";
 
+// ABI (Application Binary Interface) of the contract
+const contractABI = [
+  {
+    "inputs": [{ "internalType": "string", "name": "uri", "type": "string" }],
+    "name": "mint",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "id", "type": "uint256" }],
+    "name": "getNFT",
+    "outputs": [
+      {
+        "components": [
+          { "internalType": "uint256", "name": "id", "type": "uint256" },
+          { "internalType": "string", "name": "uri", "type": "string" }
+        ],
+        "internalType": "struct MintNFT.NFT",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "id", "type": "uint256" }],
+    "name": "tokenURI",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
+
+const MintNFT = () => {
+  const [account, setAccount] = useState(null);
+  const [uri, setUri] = useState("");
+  const [isMinting, setIsMinting] = useState(false);
+
+  // Function to connect to Metamask
   const connectWallet = async () => {
     if (window.ethereum) {
       try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();  // Await the getSigner method
-        const address = await signer.getAddress();  // Now this should work
-        setWalletAddress(address);
-
-        // Instantiate the contract
-        // const contractInstance = new ethers.Contract(contractAddress, contractABI, signer);
-        // setContract(contractInstance);
-        
+        const [selectedAccount] = await window.ethereum.request({ method: "eth_requestAccounts" });
+        setAccount(selectedAccount);
       } catch (error) {
-        console.error("Error connecting to wallet or contract:", error);
+        console.error("Error connecting to Metamask", error);
       }
     } else {
-      alert("MetaMask is not installed. Please install it to use this feature.");
+      alert("Please install Metamask!");
     }
   };
 
-    // Function to change wallet manually
-    const changeWallet = async () => {
-      if (window.ethereum) {
-        try {
-          await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
-          await connectWallet(); // Reconnect after changing wallets
-        } catch (error) {
-          console.error("Error changing wallet:", error);
-        }
-      }
-    };
+  // Function to mint NFT
+  const mintNFT = async () => {
+    if (!account || !uri) return;
+    setIsMinting(true);
 
-     // Listen to MetaMask account change events
-    useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', (accounts) => {
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0]);
-        } else {
-          setWalletAddress(null);
-          // setContract(null);
-        }
-      });
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
-      return () => {
-        window.ethereum.removeListener('accountsChanged', () => {});
-      };
-    }
-  }, []);
-
-  return (
-    <>
-      <div className="App">
-        <h1>Connect Wallet</h1>
-        {walletAddress ? (
-          <>
-            <p>Connected Wallet Address: {walletAddress}</p>
-            <button onClick={changeWallet}>Change Wallet</button>
-          </>
-        ) : (
-          <button onClick={connectWallet}>Connect Wallet</button>
-        )}
-      </div>
-    </>
-  )
-}
-
-export default App
+      const tx = await
